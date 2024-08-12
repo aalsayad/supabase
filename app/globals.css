@@ -2,32 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+.blurbackground {
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.blurbackground-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+/* Width and height of the scroll bar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+/* Track (background) of the scroll bar */
+::-webkit-scrollbar-track {
+  background: #f1f1f120;
+}
+/* Handle (thumb) of the scroll bar */
+::-webkit-scrollbar-thumb {
+  background-color: #f1f1f470;
+  border-radius: 50px;
+}
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #f1f1f485;
+}
+
+/* Hide the number spinner */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Hide the number arrows in Firefox */
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+@layer components {
+  .transition-500 {
+    @apply transition-all duration-500 ease-in-out;
   }
-}
+  .transition-300 {
+    @apply transition-all duration-300 ease-in-out;
+  }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-}
+  .section-heading-1 {
+    @apply font-paralucent text-4xl md:text-5xl lg:text-6xl mt-5 mb-2;
+  }
+  .section-heading-2 {
+    @apply font-paralucent text-3xl md:text-4xl lg:text-5xl mt-5 mb-2;
+  }
+  .section-heading-3 {
+    @apply font-paralucent text-2xl md:text-3xl lg:text-4xl;
+  }
+  .section-heading-4 {
+    @apply font-paralucent text-xl md:text-2xl lg:text-3xl;
+  }
+  .section-heading-5 {
+    @apply font-paralucent text-lg md:text-xl lg:text-2xl;
+  }
+  .footerSocialLink {
+    @apply p-2 px-3.5 rounded-lg hover:bg-white/5 cursor-pointer transition-all duration-300 ease-in-out;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Form */
+  .form-input {
+    @apply w-full py-2.5 px-3 lg:px-3.5 bg-transparent border-white/10 border-[1px] rounded-md outline-none focus:outline-none focus:border-white/30 placeholder:opacity-60 placeholder:text-xs placeholder:font-light text-xs md:text-sm font-light;
+  }
+  .form-button {
+    @apply w-full py-2.5 px-3 lg:px-3.5 bg-white/5 hover:bg-white/10 border-white/10 border-[1px] rounded-md text-xs md:text-sm font-light transition-300;
+  }
+  .form-label {
+    @apply text-xs opacity-40 font-light;
   }
 }
