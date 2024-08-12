@@ -12,17 +12,19 @@ import Button from '@/components/ui/Button';
 import { GlowStar } from '@/components/ui/Glowstar';
 
 interface FormState {
-  status: 'idle' | 'submitting' | 'pending' | 'error';
+  status: 'idle' | 'submitting' | 'pending' | 'error' | 'success';
   message: string | null;
 }
 
 const RegisterForm = () => {
+  //Keep track of form state
+  const [formState, setFormState] = useState<FormState>({ status: 'idle', message: null });
+  const [isOtpSent, setIsOtpSent] = useState<boolean>(false);
+  const [otp, setOtp] = useState<string>('');
+
   //Init Router & Supabase
   const router = useRouter();
   const supabase = createClient();
-
-  //Keep track of form state
-  const [formState, setFormState] = useState<FormState>({ status: 'idle', message: null });
 
   //Init useForm
   const {
@@ -34,149 +36,185 @@ const RegisterForm = () => {
     resolver: zodResolver(registerSchema),
   });
 
-  //Submit Login Form Function
-  const onSubmit: SubmitHandler<z.infer<typeof registerSchema>> = async (formData) => {
-    //Check if signed up is supaAdmin (only for effekt.design domains)
-    const emailDomain = formData.email.split('@')[1];
-    const isEffektDesign = emailDomain === 'effekt.design';
+  // Use `watch` to get the email value
+  const name = watch('name');
+  const email = watch('email');
 
-    //Init Submitting Status
-    setFormState({ status: 'submitting', message: '' });
+  //Logic before sending OTP
+  const preVerificationSubmit: SubmitHandler<z.infer<typeof registerSchema>> = async (formData) => {
+    //Init Submitting
+    setFormState({ status: 'submitting', message: null });
 
-    try {
-      //Check if there is an active session with a logged in user first
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      //If there is an active session redirect to homepage
-      if (user) {
-        router.refresh();
-        return;
-      }
-
-      // Sign up user
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          // emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback`,
-          data: {
-            name: formData.name,
-            supaAdmin: isEffektDesign,
-          },
-        },
-      });
-      if (signUpError) {
-        setFormState({ status: 'error', message: signUpError.message });
-        return;
-      }
-      console.log('User Signed Up');
-
-      //Add user to users database
-      const { data: insertData, error: insertError } = await supabase.from('users').insert([
-        {
-          authData: signUpData,
+    //------------------Create a new user and wait for email verification------------------
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
           name: formData.name,
-          email: formData.email,
-          supaAdmin: isEffektDesign,
-          picture: null,
         },
-      ]);
-
-      if (insertError) {
-        if (insertError.code === '23505') setFormState({ status: 'error', message: 'Email already registered' });
-        else setFormState({ status: 'error', message: insertError.message });
-        return;
-      }
-
-      setFormState({ status: 'pending', message: 'Confirmation link sent to your email' });
-      console.log('User Added to db: ', insertData);
-      router.refresh();
-      return;
-    } catch (e) {
-      console.log('Server Error: ', e);
-      setFormState({ status: 'error', message: 'Server Error' });
+      },
+    });
+    if (signUpError) {
+      setFormState({ status: 'error', message: signUpError.message });
       return;
     }
+    console.log('User added using signUp method');
+    console.log('OTP sent');
+
+    //------------------Add user to users database------------------
+    const { error: insertError } = await supabase.from('users').insert([
+      {
+        authData: signUpData,
+        name: formData.name,
+        email: formData.email,
+        supaAdmin: false,
+        picture: null,
+        verified: false,
+      },
+    ]);
+    if (insertError) {
+      if (insertError.code === '23505') setFormState({ status: 'error', message: 'Email already registered' });
+      else setFormState({ status: 'error', message: insertError.message });
+      return;
+    }
+    console.log('User added to db');
+
+    //------------------Front End switch to OTP verification form------------------
+
+    setIsOtpSent(true);
+    setFormState({ status: 'idle', message: null });
+  };
+
+  //Logic After sending OTP
+  const postVerificationSubmit: SubmitHandler<z.infer<typeof registerSchema>> = async (formData) => {
+    //Init Submitting
+    setFormState({ status: 'submitting', message: null });
+
+    //Verify OTP
+    const { error: verifyOtpError } = await supabase.auth.verifyOtp({
+      email: formData.email,
+      token: otp,
+      type: 'email',
+    });
+    if (verifyOtpError) {
+      setFormState({ status: 'error', message: verifyOtpError.message });
+      return;
+    }
+
+    setFormState({ status: 'success', message: 'Email verified' });
+    router.refresh();
   };
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className='w-full'>
+      <form
+        onSubmit={!isOtpSent ? handleSubmit(preVerificationSubmit) : handleSubmit(postVerificationSubmit)}
+        className='w-full'
+      >
+        {/* Header of Form  */}
         <div className=' flex items-center flex-col mb-[44px] md:mb-[48px] lg:mb-[52px]'>
           <GlowStar className='size-1.5 mb-4' />
           <h1 className='section-heading-3 text-center'>Register</h1>
           <p className='opacity-80 text-xs md:text-sm text-center'>Welcome to effekt client portal</p>
         </div>
+        {/* ------------------Form Fields------------------ */}
         <div className='space-y-2 md:space-y-3 w-full'>
-          {/* Name Field */}
-          <div className='relative'>
-            <label className='form-label' htmlFor='name'>
-              Name
-            </label>
-            <input
-              className={cn('form-input', {
-                'border-red-400/40 focus:border-red-400/40': errors.name,
-              })}
-              defaultValue=''
-              {...register('name')}
-            />
-            {errors.email && (
-              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.name?.message}</span>
-            )}
-          </div>
+          {!isOtpSent ? (
+            <>
+              {/* Name Field */}
+              <div className='relative'>
+                <label className='form-label' htmlFor='name'>
+                  Name
+                </label>
+                <input
+                  className={cn('form-input', {
+                    'border-red-400/40 focus:border-red-400/40': errors.name,
+                  })}
+                  defaultValue=''
+                  value={name}
+                  {...register('name')}
+                />
+                {errors.email && (
+                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.name?.message}</span>
+                )}
+              </div>
+              {/* Email Field */}
+              <div className='relative'>
+                <label className='form-label' htmlFor='email'>
+                  Email
+                </label>
+                <input
+                  className={cn('form-input', {
+                    'border-red-400/40 focus:border-red-400/40': errors.email,
+                  })}
+                  defaultValue=''
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.email?.message}</span>
+                )}
+              </div>
+              {/* Password Field */}
+              <div className='relative'>
+                <label className='form-label' htmlFor='password'>
+                  Password
+                </label>
+                <input
+                  className={cn('form-input', {
+                    'border-red-400/40 focus:border-red-400/40': errors.password,
+                  })}
+                  type='password'
+                  defaultValue=''
+                  {...register('password')}
+                />
 
-          {/* Email Field */}
-          <div className='relative'>
-            <label className='form-label' htmlFor='email'>
-              Email
-            </label>
-            <input
-              className={cn('form-input', {
-                'border-red-400/40 focus:border-red-400/40': errors.email,
-              })}
-              defaultValue=''
-              {...register('email')}
-            />
-            {errors.email && (
-              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.email?.message}</span>
-            )}
-          </div>
-          {/* Password Field */}
-          <div className='relative'>
-            <label className='form-label' htmlFor='password'>
-              Password
-            </label>
-            <input
-              className={cn('form-input', {
-                'border-red-400/40 focus:border-red-400/40': errors.password,
-              })}
-              type='password'
-              defaultValue=''
-              {...register('password')}
-            />
+                {errors.password && (
+                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.password?.message}</span>
+                )}
+              </div>
+              {/* Confirm Password Field */}
+              <div className='relative'>
+                <label className='form-label' htmlFor='password'>
+                  Confirm Password
+                </label>
+                <input
+                  className={cn('form-input', {
+                    'border-red-400/40 focus:border-red-400/40': errors.confirmPassword,
+                  })}
+                  type='password'
+                  defaultValue=''
+                  {...register('confirmPassword')}
+                />
 
-            {errors.password && (
-              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.password?.message}</span>
-            )}
-          </div>
-          {/* Confirm Password Field */}
-          <div className='relative'>
-            <label className='form-label' htmlFor='password'>
-              Confirm Password
-            </label>
-            <input
-              className={cn('form-input', {
-                'border-red-400/40 focus:border-red-400/40': errors.confirmPassword,
-              })}
-              type='password'
-              defaultValue=''
-              {...register('confirmPassword')}
-            />
-
-            {errors.confirmPassword && (
-              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.confirmPassword?.message}</span>
-            )}
-          </div>
+                {errors.confirmPassword && (
+                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>
+                    {errors.confirmPassword?.message}
+                  </span>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className='relative'>
+                <label className='form-label' htmlFor='name'>
+                  OTP sent to {email}{' '}
+                  <span
+                    onClick={() => setIsOtpSent(false)}
+                    className='inline-block opacity-50 cursor-pointer hover:opacity-100'
+                  >
+                    (Change?)
+                  </span>
+                </label>
+                <input
+                  className={cn('form-input', {})}
+                  defaultValue=''
+                  name='otp'
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Form State */}
@@ -192,6 +230,7 @@ const RegisterForm = () => {
         >
           {formState.message}
         </div>
+        {/* Form Submit Button & Form Switch Buttons */}
         <div className='w-full mb-1 md:mb-2'>
           <button
             type='submit'
@@ -199,7 +238,7 @@ const RegisterForm = () => {
               'opacity-30 pointer-events-none': formState.status === 'submitting' || formState.status === 'pending',
             })}
           >
-            <Button type='primary'>Register</Button>
+            <Button type='primary'>{!isOtpSent ? 'Register' : 'Verify'}</Button>
           </button>
         </div>
       </form>
