@@ -55,7 +55,7 @@ input[type='number'] {
     @apply font-paralucent text-3xl md:text-4xl lg:text-5xl mt-5 mb-2;
   }
   .section-heading-3 {
-    @apply font-paralucent text-2xl md:text-3xl lg:text-4xl;
+    @apply font-paralucent text-2xl md:text-3xl lg:text-4xl mb-1;
   }
   .section-heading-4 {
     @apply font-paralucent text-xl md:text-2xl lg:text-3xl;

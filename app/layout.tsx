@@ -3,6 +3,7 @@ import { Poppins, Space_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 import Navbar from '@/components/navbar/Navbar';
+import SignInListener from '@/utils/supabase/SignInListener';
 
 //Fonts
 const poppins = Poppins({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${paralucent.variable} ${spaceMono.variable} font-poppins bg-dark text-white font-light overflow-x-hidden`}
       >
+        <SignInListener />
         <Navbar />
         {children}
       </body>

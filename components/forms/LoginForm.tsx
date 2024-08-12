@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@/utils/zod/schemas';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/Button';
+import { GlowStar } from '@/components/ui/Glowstar';
 
 interface FormState {
   status: 'idle' | 'submitting' | 'success' | 'error';
@@ -37,13 +38,23 @@ const LoginForm = () => {
 
   //Submit Login Form Function
   const onSubmit: SubmitHandler<z.infer<typeof loginSchema>> = async (formData) => {
-    console.log(formData);
     setFormState({ status: 'submitting', message: '' });
     try {
+      //Check if there is an active session with a logged in user first
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      //If there is an active session redirect to homepage
+      if (user) {
+        router.refresh();
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword(formData);
       if (!error) {
         setFormState({ status: 'success', message: 'Logged in' });
         router.refresh();
+        return;
       } else {
         setFormState({ status: 'error', message: error.message });
       }
@@ -54,10 +65,15 @@ const LoginForm = () => {
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className='w-full'>
+        <div className=' flex items-center flex-col mb-[44px] md:mb-[48px] lg:mb-[52px]'>
+          <GlowStar className='size-1.5 mb-4' />
+          <h1 className='section-heading-3 text-center'>Welcome back</h1>
+          <p className='opacity-80 text-xs md:text-sm text-center'>Please sign in to continue</p>
+        </div>
         <div className='space-y-2 md:space-y-3 w-full'>
           <div className='relative'>
             <label className='form-label' htmlFor='email'>
-              Email:
+              Email
             </label>
             <input
               className={cn('form-input', {
@@ -73,7 +89,7 @@ const LoginForm = () => {
 
           <div className='relative'>
             <label className='form-label' htmlFor='password'>
-              Password:
+              Password
             </label>
             <input
               className={cn('form-input', {

@@ -25,11 +25,12 @@ const Button = ({ children, type, size = 'base', chevron, arrow, className, icon
             'text-[13px] md:text-sm px-3 md:px-4 py-[3px] md:py-[5px]': size === 'base',
             'p-0': size === 'square',
             'border-transparent bg-white/95 hover:bg-white/85 text-dark font-normal': type === 'primary',
-            'bg-white/5 hover:bg-white/10 hover:border-white/15': type === 'secondary',
+            'bg-white/5 hover:bg-white/10 hover:border-white/15 opacity-80 hover:opacity-100': type === 'secondary',
             'bg-transparent hover:bg-transparent border-transparent opacity-50 hover:opacity-100 hover:border-transparent px-1':
               type === 'ghost',
             'pointer-events-none cursor-default rounded-full bg-white/5 border-white/0': type === 'pill',
-            'bg-red-500 border-red-500 font-regular': type === 'destructive',
+            'bg-white/5 font-regular hover:bg-red-900/50 hover:border-red-800/60 opacity-80 hover:opacity-100':
+              type === 'destructive',
           },
           className
         )}
