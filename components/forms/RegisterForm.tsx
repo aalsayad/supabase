@@ -41,9 +41,11 @@ const RegisterForm = () => {
       }
       if (user) await insertNewUserInDb(supabase, user, false);
       console.log('User added using signUp method & added to db as unverified 🟢');
-      setFormState({ status: 'pending', message: 'Please check email for verififcation' });
+      setFormState({ status: 'pending', message: 'Please check your inbox for verififcation' });
     } catch (error: any) {
-      setFormState({ status: 'error', message: error.message || 'An Unknown error occurred' });
+      console.log(error.code);
+      if (error.code === '23505') setFormState({ status: 'error', message: 'Email already registered' });
+      else setFormState({ status: 'error', message: error.message || 'An Unknown error occurred' });
       return;
     }
   };
@@ -137,6 +139,7 @@ const RegisterForm = () => {
               'opacity-0': formState.status === 'idle' || formState.status === 'submitting',
               'opacity-100 bg-yellow/10 border-yellow/15 text-yellow': formState.status === 'pending',
               'opacity-100 bg-red-500/10 border-red-300/15 text-red-200': formState.status === 'error',
+              'opacity-100 bg-green-500/10 border-green-300/15 text-green-200': formState.status === 'success',
             }
           )}
         >

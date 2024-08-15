@@ -9,13 +9,21 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@/utils/zod/schemas';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon } from '@heroicons/react/24/solid';
 import Button from '@/components/ui/Button';
 import { GlowStar } from '@/components/ui/Glowstar';
-import { apiPost, VerifyUserResponse } from '@/utils/general/apiPost';
-import { signInWithOAuth } from '@/utils/supabase/actions/auth/actions';
+import {
+  resendConfirmationToEmail,
+  signInWithEmailAndPassword,
+  signInWithOAuth,
+} from '@/utils/supabase/actions/auth/actions';
+import { ArrowUpRightIcon } from '@heroicons/react/24/outline';
+import GithubLogo from '@/public/images/GithubLogo.svg';
+import GoogleLogo from '@/public/images/GoogleLogo.svg';
+import Image from 'next/image';
 
 interface FormState {
-  status: 'idle' | 'submitting' | 'success' | 'error';
+  status: 'idle' | 'submitting' | 'pending' | 'success' | 'error';
   message: string | null;
 }
 
@@ -39,41 +47,25 @@ const LoginForm = () => {
   });
 
   const email = watch('email');
-
-  //Logic to login a user or force OTP if not verified
   const login: SubmitHandler<z.infer<typeof loginSchema>> = async (formData) => {
     setFormState({ status: 'submitting', message: '' });
     try {
-      //Check if there is an active session with a logged in user first
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      //If there is an active session redirect to homepage
-      if (user) {
-        router.refresh();
-        return;
-      }
+      await signInWithEmailAndPassword(supabase, formData.email, formData.password);
+      setFormState({ status: 'success', message: 'Logged in' });
+      router.push('/');
+      router.refresh();
+    } catch (error: any) {
+      if (error.message.includes('not confirmed')) setFormState({ status: 'pending', message: 'Email not verified' });
+      else setFormState({ status: 'error', message: error.message });
+    }
+  };
 
-      const { error } = await supabase.auth.signInWithPassword(formData);
-      if (!error) {
-        setFormState({ status: 'success', message: 'Logged in' });
-        router.refresh();
-        return;
-      } else {
-        if (error.message.includes('not confirmed')) {
-          //Resend OTP again to user and grant him
-          const { error } = await supabase.auth.resend({
-            type: 'signup',
-            email: formData.email,
-          });
-          if (error) setFormState({ status: 'error', message: 'Failed to resend OTP to email' });
-          setFormState({ status: 'idle', message: null });
-        } else {
-          setFormState({ status: 'error', message: error.message });
-        }
-      }
-    } catch (e) {
-      console.log('Server Error: ', e);
+  const handleResendConfirmation = async () => {
+    try {
+      await resendConfirmationToEmail(supabase, email);
+      setFormState({ status: 'pending', message: 'Please check your inbox for verification' });
+    } catch (error: any) {
+      setFormState({ status: 'error', message: error.message });
     }
   };
 
@@ -96,6 +88,7 @@ const LoginForm = () => {
       setFormState({ status: 'submitting', message: 'Logging in through google' });
     } catch (e) {
       console.log('Error during github login:', e);
+
       setFormState({ status: 'error', message: `Failed to sign up with google` });
     }
   };
@@ -165,27 +158,58 @@ const LoginForm = () => {
               'opacity-0': formState.status === 'idle' || formState.status === 'submitting',
               'opacity-100 bg-green-500/10 border-green-300/15 text-green-200': formState.status === 'success',
               'opacity-100 bg-red-500/10 border-red-300/15 text-red-200': formState.status === 'error',
+              'opacity-100 bg-yellow/10 border-yellow/15 text-yellow': formState.status === 'pending',
             }
           )}
         >
           {formState.message}
+          {formState.message === 'Email not verified' && (
+            <>
+              <div className='size-0.5 rounded-full bg-yellow mx-2'></div>
+              <div
+                onClick={handleResendConfirmation}
+                className='flex items-center gap-1 font-medium underline cursor-pointer opacity-80 hover:opacity-100'
+              >
+                Resend confirmation <ArrowUpRightIcon className='w-2' />
+              </div>
+            </>
+          )}
         </div>
-        <div className='w-full mb-1 md:mb-2'>
-          <button
-            type='submit'
-            className={cn('w-full', {
-              'opacity-30 pointer-events-none': formState.status === 'submitting',
-            })}
-          >
-            <Button type='primary'>Log in </Button>
-          </button>
-        </div>
-        {/* login with OAuth */}
-        <div onClick={handleGithubLogin} className='w-full mb-1 md:mb-2'>
-          <Button type='secondary'>Login in with Github</Button>
-        </div>
-        <div onClick={handleGoogleLogin} className='w-full mb-1 md:mb-2'>
-          <Button type='secondary'>Login in with Google</Button>
+        <div
+          className={cn('space-y-2', {
+            'opacity-30 pointer-events-none':
+              formState.status === 'pending' || formState.status === 'submitting' || formState.status === 'success',
+          })}
+        >
+          {/* login Form Button */}
+          <div className='w-full'>
+            <button
+              type='submit'
+              className={cn('w-full', {
+                'opacity-30 pointer-events-none': formState.status === 'submitting',
+              })}
+            >
+              <Button type='primary'>
+                <LockClosedIcon className='w-4' />
+                Log in
+              </Button>
+            </button>
+          </div>
+          <div className='flex gap-2'>
+            {/* login with OAuth */}
+            <div onClick={handleGithubLogin} className='w-full'>
+              <Button type='secondary'>
+                <Image src={GithubLogo} className='w-4' alt='Github Logo' />
+                Login in with Github
+              </Button>
+            </div>
+            <div onClick={handleGoogleLogin} className='w-full'>
+              <Button type='secondary'>
+                <Image src={GoogleLogo} className='w-4' alt='Github Logo' />
+                Login in with Google
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
     </>

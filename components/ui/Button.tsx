@@ -22,7 +22,7 @@ const Button = ({ children, type, size = 'base', chevron, arrow, className, icon
           {
             'flex-row-reverse': left,
             'text-[10px] md:text-xs px-2 md:px-3 py-0.5 md:py-1': size === 'small',
-            'text-[13px] md:text-sm px-3 md:px-4 py-[3px] md:py-[5px]': size === 'base',
+            'text-[13px] md:text-sm px-3 md:px-4 py-1.5 md:py-2': size === 'base',
             'p-0': size === 'square',
             'border-transparent bg-white/95 hover:bg-white/85 text-dark font-normal': type === 'primary',
             'bg-white/5 hover:bg-white/10 hover:border-white/15 opacity-80 hover:opacity-100': type === 'secondary',

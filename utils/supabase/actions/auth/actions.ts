@@ -9,9 +9,7 @@ export async function findUserInDb(
 ): Promise<UserDbData | null> {
   const { data: userDbData, error } = await supabase.from('users').select('*').eq('authData->>id', userId).single();
 
-  if (error && error.code !== 'PGRST116') {
-    throw new Error(`Error checking existing user by authData ID - Code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 
   return userDbData;
 }
@@ -26,9 +24,7 @@ export async function updateUserVerification(
     .update({ verified: true, authData: sessionUser })
     .eq('authData->>id', userId);
 
-  if (error) {
-    throw new Error(`User verification failed to update in users db - Code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 }
 
 export async function insertNewUserInDb(
@@ -49,17 +45,13 @@ export async function insertNewUserInDb(
       name: sessionUser?.user_metadata?.name || '',
       email: sessionUser.email,
       verified: verified,
+      supaAdmin: false,
       picture,
       provider,
-      supaAdmin: false,
     },
   ]);
 
-  if (error) {
-    throw new Error(
-      `An error has occurred during inserting user to DB: - code:${error.code} - Message:${error.message}`
-    );
-  }
+  if (error) throw error;
 }
 
 export async function signUpWithEmailAndPassword(
@@ -77,9 +69,7 @@ export async function signUpWithEmailAndPassword(
     },
   });
 
-  if (error) {
-    throw new Error(`User signUp with email & password failed - code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 
   return data.user;
 }
@@ -94,9 +84,7 @@ export async function signInWithEmailAndPassword(
     password: password,
   });
 
-  if (error) {
-    throw new Error(`User sign in with Email & Password failed - code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 
   return data.user;
 }
@@ -109,9 +97,7 @@ export async function signInWithOAuth(supabase: ReturnType<typeof CreateClientTy
     },
   });
 
-  if (error) {
-    throw new Error(`Signing in with providor has failed - code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 }
 
 export async function verifyAndLoginWithOtp(
@@ -121,9 +107,7 @@ export async function verifyAndLoginWithOtp(
 ): Promise<User | null> {
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
 
-  if (error) {
-    throw new Error(`Verifying and logging user with OTP has failed - code:${error.code} - Message:${error.message}`);
-  }
+  if (error) throw error;
 
   return data.user;
 }
@@ -133,6 +117,7 @@ export async function getAuthUser(supabase: ReturnType<typeof CreateClientType>)
     data: { user },
     error,
   } = await supabase.auth.getUser();
+
   if (error || !user) {
     if (error) console.error(error);
     return null;
@@ -145,9 +130,21 @@ export async function getCurrentSession(supabase: ReturnType<typeof CreateClient
     data: { session },
     error,
   } = await supabase.auth.getSession();
-  if (error) {
-    throw new Error(`Error in getting current session - code:${error.code} - Message:${error.message}`);
-  }
+
+  if (error) throw error;
+
   if (session) return session;
   else return null;
+}
+
+export async function resendConfirmationToEmail(supabase: ReturnType<typeof CreateClientType>, email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/confirm`,
+    },
+  });
+
+  if (error) throw error;
 }
