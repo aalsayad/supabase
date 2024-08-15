@@ -15,11 +15,14 @@ interface userType {
   email: string;
   supaAdmin: boolean;
   picture: string | null;
+  provider: string;
+  verified: boolean;
 }
 
 const NavbarUserUI = ({ user }: { user: userType }) => {
   const [dropDownActive, setDropDownActive] = useState<boolean>(false);
   const router = useRouter();
+  console.log(user);
 
   const supabase = createClient(); // Initialize the Supabase client
 
@@ -110,6 +113,10 @@ const NavbarUserUI = ({ user }: { user: userType }) => {
             </span>
             <span className='block relative'>
               Email: {user.email}
+              <span className='w-1/4 bg-gradient-to-r from-dark/0 to-dark absolute block right-0 top-0 h-full'></span>
+            </span>
+            <span className='block relative'>
+              Provider: {user.provider}
               <span className='w-1/4 bg-gradient-to-r from-dark/0 to-dark absolute block right-0 top-0 h-full'></span>
             </span>
           </p>

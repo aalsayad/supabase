@@ -12,6 +12,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/Button';
 import { GlowStar } from '@/components/ui/Glowstar';
 import { apiPost, VerifyUserResponse } from '@/utils/general/apiPost';
+import { signInWithOAuth } from '@/utils/supabase/actions/auth/actions';
 
 interface FormState {
   status: 'idle' | 'submitting' | 'success' | 'error';
@@ -26,8 +27,6 @@ const LoginForm = () => {
   //Keep track of form state
   const [formState, setFormState] = useState<FormState>({ status: 'idle', message: null });
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [otpNeeded, setOtpNeeded] = useState<boolean>(false);
-  const [otp, setOtp] = useState<string>('');
 
   //Init useForm
   const {
@@ -41,50 +40,8 @@ const LoginForm = () => {
 
   const email = watch('email');
 
-  //Logic to verify user using OTP
-  const otpLogin: SubmitHandler<z.infer<typeof loginSchema>> = async (formData) => {
-    //Init Submitting
-    setFormState({ status: 'submitting', message: null });
-
-    // Verify OTP
-    const { data: verifyOtpData, error: verifyOtpError } = await supabase.auth.verifyOtp({
-      email: formData.email,
-      token: otp,
-      type: 'email',
-    });
-
-    if (verifyOtpError) {
-      setFormState({ status: 'error', message: verifyOtpError.message });
-      return;
-    }
-
-    // Call your custom API to update the user's verified status
-    try {
-      const response = await fetch('/api/auth/update-user-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email, authUserData: verifyOtpData.user }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to update user');
-      }
-
-      console.log('User verified:', result);
-      setFormState({ status: 'success', message: 'Email verified' });
-      router.refresh();
-    } catch (error) {
-      console.error('Update Error:', error);
-      setFormState({ status: 'error', message: 'Error occurred during verification' });
-    }
-  };
-
   //Logic to login a user or force OTP if not verified
-  const regularLogin: SubmitHandler<z.infer<typeof loginSchema>> = async (formData) => {
+  const login: SubmitHandler<z.infer<typeof loginSchema>> = async (formData) => {
     setFormState({ status: 'submitting', message: '' });
     try {
       //Check if there is an active session with a logged in user first
@@ -104,7 +61,6 @@ const LoginForm = () => {
         return;
       } else {
         if (error.message.includes('not confirmed')) {
-          setOtpNeeded(true);
           //Resend OTP again to user and grant him
           const { error } = await supabase.auth.resend({
             type: 'signup',
@@ -125,26 +81,27 @@ const LoginForm = () => {
     setFormState({ status: 'submitting', message: '' });
     console.log('Logging in with Github');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: `${window.location.origin}/auth/confirm`, // Replace with your specific URL
-        },
-      });
-      if (error) {
-        console.log('Error during github login:', error);
-        setFormState({ status: 'error', message: `Failed to sign up with github:` });
-      }
-
+      await signInWithOAuth(supabase, 'github');
       setFormState({ status: 'submitting', message: 'Logging in through github' });
     } catch (e) {
       console.log('Error during github login:', e);
       setFormState({ status: 'error', message: `Failed to sign up with github` });
     }
   };
+  const handleGoogleLogin = async function () {
+    setFormState({ status: 'submitting', message: '' });
+    console.log('Logging in with Google');
+    try {
+      await signInWithOAuth(supabase, 'google');
+      setFormState({ status: 'submitting', message: 'Logging in through google' });
+    } catch (e) {
+      console.log('Error during github login:', e);
+      setFormState({ status: 'error', message: `Failed to sign up with google` });
+    }
+  };
   return (
     <>
-      <form onSubmit={!otpNeeded ? handleSubmit(regularLogin) : handleSubmit(otpLogin)} className='w-full'>
+      <form onSubmit={handleSubmit(login)} className='w-full'>
         {/* ------------------Form Header------------------ */}
         <div className=' flex items-center flex-col mb-[44px] md:mb-[48px] lg:mb-[52px]'>
           <GlowStar className='size-1.5 mb-4' />
@@ -153,72 +110,51 @@ const LoginForm = () => {
         </div>
         {/* ------------------Form Fields------------------ */}
         <div className='space-y-2 md:space-y-3 w-full'>
-          {/* OTP Field */}
-          {!otpNeeded ? (
-            <>
-              {' '}
-              {/* email Field */}
-              <div className='relative'>
-                <label className='form-label' htmlFor='email'>
-                  Email
-                </label>
-                <input
-                  className={cn('form-input', {
-                    'border-red-400/40 focus:border-red-400/40': errors.email,
-                  })}
-                  defaultValue=''
-                  {...register('email')}
-                />
-                {errors.email && (
-                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.email?.message}</span>
-                )}
-              </div>
-              {/* Password Field */}
-              <div className='relative'>
-                <label className='form-label' htmlFor='password'>
-                  Password
-                </label>
-                <input
-                  className={cn('form-input', {
-                    'border-red-400/40 focus:border-red-400/40': errors.password,
-                  })}
-                  type={showPassword ? 'string' : 'password'}
-                  defaultValue=''
-                  {...register('password')}
-                />
-                {!showPassword && (
-                  <EyeSlashIcon
-                    onClick={() => setShowPassword(true)}
-                    className='absolute right-2 bottom-3.5 w-4 cursor-pointer hover:opacity-100 opacity-40 transition-300'
-                  />
-                )}
-                {showPassword && (
-                  <EyeIcon
-                    onClick={() => setShowPassword(false)}
-                    className='absolute right-2 bottom-3.5 w-4 cursor-pointer opacity-90 transition-300'
-                  />
-                )}
-                {errors.password && (
-                  <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.password?.message}</span>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className='relative'>
-                <label className='form-label' htmlFor='name'>
-                  OTP sent to {email}
-                </label>
-                <input
-                  className={cn('form-input', {})}
-                  defaultValue=''
-                  name='otp'
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
-              </div>
-            </>
-          )}
+          {/* email Field */}
+          <div className='relative'>
+            <label className='form-label' htmlFor='email'>
+              Email
+            </label>
+            <input
+              className={cn('form-input', {
+                'border-red-400/40 focus:border-red-400/40': errors.email,
+              })}
+              defaultValue=''
+              {...register('email')}
+            />
+            {errors.email && (
+              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.email?.message}</span>
+            )}
+          </div>
+          {/* Password Field */}
+          <div className='relative'>
+            <label className='form-label' htmlFor='password'>
+              Password
+            </label>
+            <input
+              className={cn('form-input', {
+                'border-red-400/40 focus:border-red-400/40': errors.password,
+              })}
+              type={showPassword ? 'string' : 'password'}
+              defaultValue=''
+              {...register('password')}
+            />
+            {!showPassword && (
+              <EyeSlashIcon
+                onClick={() => setShowPassword(true)}
+                className='absolute right-2 bottom-3.5 w-4 cursor-pointer hover:opacity-100 opacity-40 transition-300'
+              />
+            )}
+            {showPassword && (
+              <EyeIcon
+                onClick={() => setShowPassword(false)}
+                className='absolute right-2 bottom-3.5 w-4 cursor-pointer opacity-90 transition-300'
+              />
+            )}
+            {errors.password && (
+              <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.password?.message}</span>
+            )}
+          </div>
         </div>
 
         {/* Form State */}
@@ -241,12 +177,15 @@ const LoginForm = () => {
               'opacity-30 pointer-events-none': formState.status === 'submitting',
             })}
           >
-            <Button type='primary'>{!otpNeeded ? 'Log in' : 'Verify'} </Button>
+            <Button type='primary'>Log in </Button>
           </button>
         </div>
         {/* login with OAuth */}
         <div onClick={handleGithubLogin} className='w-full mb-1 md:mb-2'>
-          <Button type='primary'>Login in with Github</Button>
+          <Button type='secondary'>Login in with Github</Button>
+        </div>
+        <div onClick={handleGoogleLogin} className='w-full mb-1 md:mb-2'>
+          <Button type='secondary'>Login in with Google</Button>
         </div>
       </form>
     </>

@@ -1,24 +1,30 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { createServiceRoleClient } from '@/utils/supabase/server-service-role';
-import { findUserInDb, insertNewUser, updateUserVerification } from '@/utils/supabase/actions/auth/actions';
+import {
+  findUserInDb,
+  insertNewUserInDb,
+  updateUserVerification,
+  verifyAndLoginWithOtp,
+  getCurrentSession,
+} from '@/utils/supabase/actions/auth/actions';
 
 type JsonResponse = {
   message?: string;
   error?: string;
+  session?: any;
 };
 function jsonResponse(message: JsonResponse, status: number) {
   return NextResponse.json(message, { status });
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const { token, email, code, sessionUser } = await req.json(); // Extract data from the request body
-  console.log(token, email, code, sessionUser);
+  const { token, email, code, sessionUser } = await req.json();
 
   const supabase = createServiceRoleClient();
-  if (!sessionUser) return jsonResponse({ error: `No Active user found 🔸` }, 500);
 
   try {
     if (code) {
+      if (!sessionUser) return jsonResponse({ error: `No Active user found 🔸` }, 500);
       const userDbData = await findUserInDb(supabase, sessionUser.id);
 
       if (userDbData) {
@@ -30,16 +36,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
       }
 
-      await insertNewUser(supabase, sessionUser);
+      await insertNewUserInDb(supabase, sessionUser, true);
       return jsonResponse({ message: 'User Added & verified in users db 🟢' }, 200);
     }
 
     if (token && email) {
-      console.log(`Token - ${token} & Email - ${email} received from search params - attempting to verify and sign in`);
-      // Additional logic for handling token and email should be added here
+      const user = await verifyAndLoginWithOtp(supabase, email, token);
+      if (!user) return jsonResponse({ message: 'User Verified but no user data could be retreived 🔸' }, 404);
+      await updateUserVerification(supabase, user.id, user);
+
+      const session = await getCurrentSession(supabase);
+      return jsonResponse({ message: 'User Added & verified in users db 🟢', session }, 200);
     }
 
-    return jsonResponse({ message: 'No Authentication Data was received' }, 404);
+    return jsonResponse({ message: 'No Authentication Data was received 🔸' }, 404);
   } catch (error) {
     console.error('Unexpected error in POST handler:', error);
     return jsonResponse({ error: `Unexpected error occurred 🔸 ${error}` }, 500);

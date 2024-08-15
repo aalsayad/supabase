@@ -6,32 +6,25 @@ import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import { createClient } from '@/utils/supabase/client';
 import debounce from 'lodash.debounce';
+import { getAuthUser } from '@/utils/supabase/actions/auth/actions';
 
-const getClient = async function () {
+export default function AuthConfirmPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) throw new Error(`Error encountered fetcing user session - ${error}`);
-  console.log(user);
-  return user;
-};
-
-export default function AuthCallback() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const email = searchParams.get('email');
   const code = searchParams.get('code');
-  const [status, setStatus] = useState<string>('Verifying...');
-  console.log(token, email, code);
 
-  //Verify user API endpoint async function
-  const verifyUser = useCallback(
+  const [status, setStatus] = useState<string>('Verifying...');
+
+  //Complete Sign up process from supabase auth
+  const handleAuthCallBack = useCallback(
     debounce(async () => {
       try {
-        const user = await getClient();
+        //Fetch user from current session if available
+        const user = await getAuthUser(supabase);
         const response = await fetch('/api/auth/callback', {
           method: 'POST',
           headers: {
@@ -45,9 +38,11 @@ export default function AuthCallback() {
           }),
         });
 
+        //Get response from api/auth/callback - status/error/session
         const data = await response.json();
 
         if (response.ok) {
+          if (data.session) await supabase.auth.setSession(data.session);
           setStatus(data.message || 'Verification successful');
           router.push('/');
           router.refresh();
@@ -55,17 +50,19 @@ export default function AuthCallback() {
           setStatus(data.error || 'Verification failed');
         }
       } catch (error) {
-        setStatus('Unexpected error occurred during verification');
+        console.error(error);
+        setStatus(`Unexpected error occurred during verification:
+          ${error}`);
       }
     }, 300),
     []
   );
 
   useEffect(() => {
-    verifyUser();
+    handleAuthCallBack();
 
     return () => {
-      verifyUser.cancel();
+      handleAuthCallBack.cancel();
     };
   }, []);
 
