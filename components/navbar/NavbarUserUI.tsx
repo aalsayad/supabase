@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Button from '../ui/Button';
 import { createClient } from '@/utils/supabase/client'; // Adjust the path as necessary
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface userType {
   id: number;
@@ -32,29 +33,35 @@ const NavbarUserUI = ({ user }: { user: userType }) => {
   };
 
   const handleAccountDelete = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     console.log('Deleting user...');
-    try {
-      const response = await fetch('/api/auth/delete-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.authData.user.id,
-          email: user.email,
-        }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('Error:', errorData.error);
-        return;
+    if (user) {
+      try {
+        const response = await fetch('/api/auth/delete-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            email: user.email,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.log('Error:', errorData.error);
+          return;
+        }
+
+        console.log('User Deleted from both Auth & DB');
+        router.refresh(); // Refresh the page to re-trigger SSR and update the Navbar
+      } catch (e) {
+        console.log(e);
       }
-
-      console.log('User Deleted from both Auth & DB');
-      router.refresh(); // Refresh the page to re-trigger SSR and update the Navbar
-    } catch (e) {
-      console.log(e);
     }
   };
 
@@ -69,7 +76,16 @@ const NavbarUserUI = ({ user }: { user: userType }) => {
         <div className='flex gap-2 items-center'>
           <div className='size-8 rounded-full overflow-hidden flex items-center justify-center bg-white/5 relative'>
             {user.picture ? (
-              <div className='absolute w-full h-full bg-white/5 animate-pulse top-0 left-0'></div>
+              <div className='realtive w-full h-full bg-white/5 top-0 left-0'>
+                <Image
+                  src={user.picture}
+                  alt='user picture'
+                  width='300'
+                  height='300'
+                  className='w-full h-full object-fill'
+                />
+                <div className='w-full h-full bg-white/5 top-0 left-0 animate-pulse'></div>
+              </div>
             ) : (
               <div className='absolute w-full h-full bg-slate-800 top-0 left-0 flex items-center justify-center font-semibold uppercase'>
                 {user.email.charAt(0)}

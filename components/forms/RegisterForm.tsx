@@ -88,30 +88,53 @@ const RegisterForm = () => {
 
   //Logic After sending OTP
   const postVerificationSubmit: SubmitHandler<z.infer<typeof registerSchema>> = async (formData) => {
-    //Init Submitting
+    // Init Submitting
     setFormState({ status: 'submitting', message: null });
 
-    //Verify OTP
-    const { error: verifyOtpError } = await supabase.auth.verifyOtp({
+    // Verify OTP
+    const { data: verifyOtpData, error: verifyOtpError } = await supabase.auth.verifyOtp({
       email: formData.email,
       token: otp,
       type: 'email',
     });
+
     if (verifyOtpError) {
       setFormState({ status: 'error', message: verifyOtpError.message });
       return;
     }
 
-    setFormState({ status: 'success', message: 'Email verified' });
-    router.refresh();
+    // Call your custom API to update the user's verified status
+    try {
+      const response = await fetch('/api/auth/update-user-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formData.email, authUserData: verifyOtpData.user }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update user');
+      }
+
+      console.log('User verified:', result);
+      setFormState({ status: 'success', message: 'Email verified' });
+      router.refresh();
+    } catch (error) {
+      console.error('Update Error:', error);
+      setFormState({ status: 'error', message: 'Error occurred during verification' });
+    }
   };
+
   return (
     <>
       <form
         onSubmit={!isOtpSent ? handleSubmit(preVerificationSubmit) : handleSubmit(postVerificationSubmit)}
         className='w-full'
       >
-        {/* Header of Form  */}
+        {/* ------------------Form Header------------------ */}
         <div className=' flex items-center flex-col mb-[44px] md:mb-[48px] lg:mb-[52px]'>
           <GlowStar className='size-1.5 mb-4' />
           <h1 className='section-heading-3 text-center'>Register</h1>
@@ -195,9 +218,10 @@ const RegisterForm = () => {
             </>
           ) : (
             <>
+              {/* OTP Field */}
               <div className='relative'>
                 <label className='form-label' htmlFor='name'>
-                  OTP sent to {email}{' '}
+                  OTP sent to {email}
                   <span
                     onClick={() => setIsOtpSent(false)}
                     className='inline-block opacity-50 cursor-pointer hover:opacity-100'

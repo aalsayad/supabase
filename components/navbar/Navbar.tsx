@@ -19,7 +19,7 @@ const getUserData = async () => {
     if (!authEmail) {
       console.log('❓ No User Authenticated');
       return;
-    } else console.log('⬇️ ', authEmail, 'is fetched from current auth session ');
+    } else console.log('⬇️  User email is fetched from SupaAuth:', authEmail);
 
     //Find email in users db
     const { data: dbUser, error: dbError } = await supabase.from('users').select('*').eq('email', authEmail).single();
@@ -29,7 +29,7 @@ const getUserData = async () => {
       return;
     }
     if (dbUser) {
-      console.log('User Found:', dbUser);
+      console.log('⬇️  User authData is fetched from db:', dbUser.authData.id);
       return dbUser;
     } else {
       console.log('❔ User Not Found');
