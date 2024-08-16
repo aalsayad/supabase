@@ -1,5 +1,8 @@
 import { createClient as CreateClientType } from '../../server';
 import { Session, User, Provider } from '@supabase/supabase-js';
+import { db } from '@/db';
+import { eq } from 'drizzle-orm';
+import { usersTable } from '@/db/schema';
 
 type UserDbData = any;
 
@@ -7,6 +10,7 @@ export async function findUserInDb(
   supabase: ReturnType<typeof CreateClientType>,
   userId: string
 ): Promise<UserDbData | null> {
+  console.log('findUserInDb...');
   const { data: userDbData, error } = await supabase.from('users').select('*').eq('authData->>id', userId).single();
 
   if (error) throw error;
@@ -19,6 +23,7 @@ export async function updateUserVerification(
   userId: string,
   sessionUser: User
 ): Promise<void> {
+  console.log('updateUserVerification...');
   const { error } = await supabase
     .from('users')
     .update({ verified: true, authData: sessionUser })
@@ -32,13 +37,16 @@ export async function insertNewUserInDb(
   sessionUser: User,
   verified: boolean
 ) {
+  console.log('insertNewUserInDb...');
   const provider = sessionUser.app_metadata.provider;
+  console.log(provider);
   const picture =
     provider === 'github'
       ? sessionUser?.user_metadata?.avatar_url
       : provider === 'google'
       ? sessionUser?.user_metadata?.picture
       : null;
+  console.log(picture);
   const { error } = await supabase.from('users').insert([
     {
       authData: sessionUser,
@@ -60,6 +68,7 @@ export async function signUpWithEmailAndPassword(
   password: string,
   userExtraMetaData?: any
 ): Promise<User | null> {
+  console.log('signUpWithEmailAndPassword...');
   const { data, error } = await supabase.auth.signUp({
     email: email,
     password: password,
@@ -79,6 +88,7 @@ export async function signInWithEmailAndPassword(
   email: string,
   password: string
 ): Promise<User | null> {
+  console.log('signInWithEmailAndPassword...');
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email,
     password: password,
@@ -90,6 +100,7 @@ export async function signInWithEmailAndPassword(
 }
 
 export async function signInWithOAuth(supabase: ReturnType<typeof CreateClientType>, provider: Provider) {
+  console.log('signInWithOAuth...');
   const { error } = await supabase.auth.signInWithOAuth({
     provider: provider,
     options: {
@@ -105,6 +116,7 @@ export async function verifyAndLoginWithOtp(
   email: string,
   token: string
 ): Promise<User | null> {
+  console.log('verifyAndLoginWithOtp...');
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
 
   if (error) throw error;
@@ -113,6 +125,7 @@ export async function verifyAndLoginWithOtp(
 }
 
 export async function getAuthUser(supabase: ReturnType<typeof CreateClientType>): Promise<User | null> {
+  console.log('getAuthUser...');
   const {
     data: { user },
     error,
@@ -126,6 +139,7 @@ export async function getAuthUser(supabase: ReturnType<typeof CreateClientType>)
 }
 
 export async function getCurrentSession(supabase: ReturnType<typeof CreateClientType>): Promise<Session | null> {
+  console.log('getCurrentSession...');
   const {
     data: { session },
     error,
@@ -138,6 +152,7 @@ export async function getCurrentSession(supabase: ReturnType<typeof CreateClient
 }
 
 export async function resendConfirmationToEmail(supabase: ReturnType<typeof CreateClientType>, email: string) {
+  console.log('resendConfirmationToEmail...');
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email,

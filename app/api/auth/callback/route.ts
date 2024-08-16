@@ -50,8 +50,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     return jsonResponse({ message: 'No Authentication Data was received 🔸' }, 404);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in POST handler:', error);
-    return jsonResponse({ error: `Unexpected error occurred 🔸 ${error}` }, 500);
+    return jsonResponse({ error: `Unexpected error occurred 🔸 ${error.message}` }, 500);
   }
 }
