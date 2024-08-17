@@ -5,38 +5,22 @@ import effektLogo from '@/public/images/effektlogo.svg';
 import { createClient } from '@/utils/supabase/server';
 import NavbarUserUI from './NavbarUserUI';
 import Link from 'next/link';
+import { findUserInDbById } from '@/utils/actions/serverActions';
 
 const getUserData = async () => {
   const supabase = createClient();
 
   try {
-    //Get Authenticated user email & access
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const authEmail = user?.email;
+    if (!user) return null;
 
-    if (!authEmail) {
-      console.log('❓ No User Authenticated');
-      return;
-    } else console.log('⬇️  User email is fetched from SupaAuth:', authEmail);
-
-    //Find email in users db
-    const { data: dbUser, error: dbError } = await supabase.from('users').select('*').eq('email', authEmail).single();
-
-    if (dbError) {
-      console.log(dbError);
-      return;
-    }
-    if (dbUser) {
-      console.log('⬇️  User authData is fetched from db:', dbUser.authData.id);
-      return dbUser;
-    } else {
-      console.log('❔ User Not Found');
-      return;
-    }
+    const userTableData = await findUserInDbById(user.id);
+    return userTableData;
   } catch (e) {
     console.log(e);
+    return;
   }
 };
 

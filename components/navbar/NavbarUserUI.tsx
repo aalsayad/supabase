@@ -6,65 +6,38 @@ import Button from '../ui/Button';
 import { createClient } from '@/utils/supabase/client'; // Adjust the path as necessary
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { SelectUser } from '@/db/schema';
+import { getClientAuthUser } from '@/utils/actions/clientActions';
+import { deleteAccountById } from '@/utils/actions/serverActions';
 
-interface userType {
-  id: number;
-  authData: { user: any; session: any };
-  created_at: string;
-  name: string | null;
-  email: string;
-  supaAdmin: boolean;
-  picture: string | null;
-  provider: string;
-  verified: boolean;
-}
-
-const NavbarUserUI = ({ user }: { user: userType }) => {
+const NavbarUserUI = ({ user }: { user: SelectUser }) => {
   const [dropDownActive, setDropDownActive] = useState<boolean>(false);
   const router = useRouter();
-  console.log(user);
 
   const supabase = createClient(); // Initialize the Supabase client
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      router.refresh(); // Refresh the page to re-trigger SSR and update the Navbar
+      router.push('/auth');
+      router.refresh();
     } catch (e) {
       console.log('error has occured during sign out:', e);
     }
   };
 
   const handleAccountDelete = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    console.log('Deleting user...');
+    try {
+      const user = await getClientAuthUser();
+      if (!user) throw Error('Could not retreive user from current session');
+      const id = user?.id;
 
-    if (user) {
-      try {
-        const response = await fetch('/api/auth/delete-user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            email: user.email,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.log('Error:', errorData.error);
-          return;
-        }
-
-        console.log('User Deleted from both Auth & DB');
-        router.refresh(); // Refresh the page to re-trigger SSR and update the Navbar
-      } catch (e) {
-        console.log(e);
-      }
+      await deleteAccountById(id);
+      console.log(`Account ${id} was deleted from Auth & DB`);
+      router.push('/');
+      router.refresh();
+    } catch (e) {
+      console.log(e);
     }
   };
 

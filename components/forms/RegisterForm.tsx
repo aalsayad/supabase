@@ -1,7 +1,7 @@
 'use client';
 
-import { createClient } from '@/utils/supabase/client'; // Adjust the path as necessary
-import { insertNewUserInDb, signUpWithEmailAndPassword } from '@/utils/supabase/actions/auth/actions';
+import { signUpWithEmailAndPassword } from '@/utils/actions/clientActions';
+import { findUserInDbByEmail, findUserInDbById, insertNewUserInDb } from '@/utils/actions/serverActions';
 import cn from '@/utils/general/cn';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema } from '@/utils/zod/schemas';
 import Button from '@/components/ui/Button';
 import { GlowStar } from '@/components/ui/Glowstar';
+import { User } from '@supabase/supabase-js';
 
 interface FormState {
   status: 'idle' | 'submitting' | 'pending' | 'error' | 'success';
@@ -17,7 +18,6 @@ interface FormState {
 }
 
 const RegisterForm = () => {
-  const supabase = createClient();
   const [formState, setFormState] = useState<FormState>({ status: 'idle', message: null });
 
   const {
@@ -31,21 +31,34 @@ const RegisterForm = () => {
 
   const handleEmailSignUp: SubmitHandler<z.infer<typeof registerSchema>> = async (formData) => {
     setFormState({ status: 'submitting', message: null });
-
     try {
-      const user = await signUpWithEmailAndPassword(supabase, formData.email, formData.password, {
-        name: formData.name,
-      });
+      const userDbData = await findUserInDbByEmail(formData.email);
+      if (userDbData) {
+        setFormState({ status: 'error', message: 'User already Exsists' });
+        return;
+      }
+
+      const user: User | null = await signUpWithEmailAndPassword(
+        formData.email,
+        formData.password,
+        window.location.origin,
+        {
+          name: formData.name,
+        }
+      );
       if (!user) {
         setFormState({ status: 'error', message: 'Error has occured during sign up' });
+        return;
       }
-      if (user) await insertNewUserInDb(supabase, user, false);
-      console.log('User added using signUp method & added to db as unverified 🟢');
-      setFormState({ status: 'pending', message: 'Please check your inbox for verififcation' });
+      if (user) {
+        await insertNewUserInDb(user, false);
+
+        setFormState({ status: 'pending', message: 'Please check your inbox for verififcation' });
+        return;
+      }
     } catch (error: any) {
-      console.log(error.code);
-      if (error.code === '23505') setFormState({ status: 'error', message: 'Email already registered' });
-      else setFormState({ status: 'error', message: error.message || 'An Unknown error occurred' });
+      console.log(error);
+      setFormState({ status: 'error', message: 'An Unknown error occurred' });
       return;
     }
   };
@@ -73,7 +86,7 @@ const RegisterForm = () => {
               defaultValue=''
               {...register('name')}
             />
-            {errors.email && (
+            {errors.name && (
               <span className='absolute top-1 right-1 md:text-xs text-red-400'>{errors.name?.message}</span>
             )}
           </div>
@@ -131,22 +144,8 @@ const RegisterForm = () => {
           </div>
         </div>
 
-        {/* Form State */}
-        <div
-          className={cn(
-            'h-10 w-full flex items-center justify-center text-xs md:text-xs opacity-80 border-[1px]  rounded-lg my-1 md:my-2 lg:my-3',
-            {
-              'opacity-0': formState.status === 'idle' || formState.status === 'submitting',
-              'opacity-100 bg-yellow/10 border-yellow/15 text-yellow': formState.status === 'pending',
-              'opacity-100 bg-red-500/10 border-red-300/15 text-red-200': formState.status === 'error',
-              'opacity-100 bg-green-500/10 border-green-300/15 text-green-200': formState.status === 'success',
-            }
-          )}
-        >
-          {formState.message}
-        </div>
         {/* Form Submit Button & Form Switch Buttons */}
-        <div className='w-full mb-1 md:mb-2'>
+        <div className='w-full mt-3 lg:mt-5'>
           <button
             type='submit'
             className={cn('w-full', {
@@ -155,6 +154,22 @@ const RegisterForm = () => {
           >
             <Button type='primary'>Register</Button>
           </button>
+        </div>
+        {/* Form State */}
+        <div className='h-28 items-center justify-center flex'>
+          <div
+            className={cn(
+              'py-2 w-full flex items-center justify-center text-xs md:text-xs opacity-80 border-[1px]  rounded-lg my-1 md:my-2 lg:my-3',
+              {
+                'opacity-0': formState.status === 'idle' || formState.status === 'submitting',
+                'opacity-100 bg-yellow/10 border-yellow/15 text-yellow': formState.status === 'pending',
+                'opacity-100 bg-red-500/10 border-red-300/15 text-red-200': formState.status === 'error',
+                'opacity-100 bg-green-500/10 border-green-300/15 text-green-200': formState.status === 'success',
+              }
+            )}
+          >
+            {formState.message}
+          </div>
         </div>
       </form>
     </>

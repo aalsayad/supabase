@@ -1,0 +1,1 @@
+ALTER TABLE "users_table" ADD COLUMN "auth_data" jsonb NOT NULL;
