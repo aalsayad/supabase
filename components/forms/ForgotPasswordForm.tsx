@@ -41,7 +41,7 @@ const ForgotPasswordForm = () => {
       if (userProvider !== 'email')
         throw Error(`No password associated with this email. Please use ${userProvider} to sign in`);
 
-      await resetPassword(formData.email, window.location.origin);
+      await resetPassword(formData.email);
       setFormState({ status: 'pending', message: 'Please check your inbox' });
     } catch (error: any) {
       setFormState({ status: 'error', message: error.message || 'Unknown error encountered' });
