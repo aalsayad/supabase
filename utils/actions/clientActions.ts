@@ -8,12 +8,12 @@ const supabase = createClient(); //*Imported from /supabase/client
 //!   or there is a risk of exposing the SERVICE_ROLE_KEY to the client
 
 //@Signs in a user using OAuth - Opens Window
-export async function signInWithOAuth(provider: Provider, redirectURL: string) {
+export async function signInWithOAuth(provider: Provider) {
   console.log('signInWithOAuth⚡');
   const { error } = await supabase.auth.signInWithOAuth({
     provider: provider,
     options: {
-      redirectTo: `${redirectURL}/verify`,
+      redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/verify`,
     },
   });
 
@@ -67,7 +67,6 @@ export async function signInWithEmailAndPassword(email: string, password: string
 export async function signUpWithEmailAndPassword(
   email: string,
   password: string,
-  redirectURL: string,
   userExtraMetaData?: any
 ): Promise<User | null> {
   console.log('signUpWithEmailAndPassword⚡');
@@ -75,7 +74,7 @@ export async function signUpWithEmailAndPassword(
     email: email,
     password: password,
     options: {
-      emailRedirectTo: `${redirectURL}/verify`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/verify`,
       data: userExtraMetaData,
     },
   });

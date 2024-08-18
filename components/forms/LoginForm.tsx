@@ -95,7 +95,7 @@ const LoginForm = ({ setFormComponent }: { setFormComponent: SetFormComponentTyp
     setFormState({ status: 'submitting', message: '' });
     console.log('Logging in with Github');
     try {
-      await signInWithOAuth('github', window.location.origin);
+      await signInWithOAuth('github');
       setFormState({ status: 'submitting', message: 'Logging in through github' });
     } catch (e) {
       console.log('Error during github login:', e);
@@ -106,7 +106,7 @@ const LoginForm = ({ setFormComponent }: { setFormComponent: SetFormComponentTyp
     setFormState({ status: 'submitting', message: '' });
     console.log('Logging in with Google');
     try {
-      await signInWithOAuth('google', window.location.origin);
+      await signInWithOAuth('google');
       setFormState({ status: 'submitting', message: 'Logging in through google' });
     } catch (e) {
       console.log('Error during github login:', e);
