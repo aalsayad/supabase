@@ -38,14 +38,9 @@ const RegisterForm = () => {
         return;
       }
 
-      const user: User | null = await signUpWithEmailAndPassword(
-        formData.email,
-        formData.password,
-        window.location.origin,
-        {
-          name: formData.name,
-        }
-      );
+      const user: User | null = await signUpWithEmailAndPassword(formData.email, formData.password, {
+        name: formData.name,
+      });
       if (!user) {
         setFormState({ status: 'error', message: 'Error has occured during sign up' });
         return;
