@@ -6,6 +6,11 @@ import { createServiceRoleClient } from '../supabase/server-service-role';
 
 const supabase = createServiceRoleClient(); //*Imported from /supabase/server-service-role
 
+const redirectURL =
+  process.env.NEXT_PUBLIC_CURRENT_ENVIROMENT === 'dev'
+    ? 'http://localhost:3000/verify'
+    : 'https://supabase-ebon.vercel.app/verify';
+
 //@--Returns a userfrom users Table by ID
 export async function findUserInDbById(userId: string): Promise<SelectUser | null> {
   console.log('findUserInDb⚡');
@@ -114,6 +119,19 @@ export async function deleteAccountById(userId: string) {
 
   const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
   if (deleteAuthError) throw deleteAuthError;
+}
+
+//@Signs in a user using OAuth - Opens Window
+export async function signInWithOAuth(provider: Provider) {
+  console.log('signInWithOAuth⚡');
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: provider,
+    options: {
+      redirectTo: redirectURL,
+    },
+  });
+
+  if (error) throw error;
 }
 
 //!Amazon S3

@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button';
 import { GlowStar } from '@/components/ui/Glowstar';
 import { findUserInDbByEmail } from '@/utils/actions/serverActions';
 import { signInWithEmailAndPassword, resendConfirmationToEmail } from '@/utils/actions/clientActions';
-import { signInWithOAuth } from '@/utils/actions/clientActions';
+import { signInWithOAuth } from '@/utils/actions/serverActions';
 import { ArrowUpRightIcon } from '@heroicons/react/24/outline';
 import GithubLogo from '@/public/images/GithubLogo.svg';
 import GoogleLogo from '@/public/images/GoogleLogo.svg';
