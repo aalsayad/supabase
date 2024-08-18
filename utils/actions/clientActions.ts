@@ -1,6 +1,9 @@
 import { Provider, Session, User } from '@supabase/supabase-js';
 import { createClient } from '../supabase/client';
 
+const redirectURL =
+  process.env.CURRENT_ENVIROMENT === 'dev' ? 'http://localhost:3000' : 'https://supabase-ebon.vercel.app/';
+
 const supabase = createClient(); //*Imported from /supabase/client
 //!   Important Notice:
 //!   -----------------
@@ -13,7 +16,7 @@ export async function signInWithOAuth(provider: Provider) {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: provider,
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/verify`,
+      redirectTo: redirectURL,
     },
   });
 
@@ -74,7 +77,7 @@ export async function signUpWithEmailAndPassword(
     email: email,
     password: password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/verify`,
+      emailRedirectTo: redirectURL,
       data: userExtraMetaData,
     },
   });
@@ -91,7 +94,7 @@ export async function resendConfirmationToEmail(email: string) {
     type: 'signup',
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/verify`,
+      emailRedirectTo: redirectURL,
     },
   });
 
@@ -109,7 +112,7 @@ export async function verifyAndLoginWithOtp(email: string, token: string): Promi
 }
 
 //@--Resends confirmation email to reset password
-export async function resetPassword(email: string, redirectURL: string) {
+export async function resetPassword(email: string) {
   console.log('resetPassword⚡');
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectURL,
