@@ -105,9 +105,9 @@ const LoginForm = ({ setFormComponent }: { setFormComponent: SetFormComponentTyp
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
-        options: {
-          redirectTo: redirectURL,
-        },
+        // options: {
+        //   redirectTo: redirectURL,
+        // },
       });
 
       if (error) throw error;
