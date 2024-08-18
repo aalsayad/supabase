@@ -4,14 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
-import { createClient } from '@/utils/supabase/client';
 import debounce from 'lodash.debounce';
-import {
-  findUserInDbByEmail,
-  findUserInDbById,
-  insertNewUserInDb,
-  updateUserDbVerification,
-} from '@/utils/actions/serverActions';
+import { findUserInDbById, insertNewUserInDb, updateUserDbVerification } from '@/utils/actions/serverActions';
 import { getCurrentClientSession, verifyAndLoginWithOtp } from '@/utils/actions/clientActions';
 import { SelectUser } from '@/db/schema';
 import { GlowStar } from '@/components/ui/Glowstar';

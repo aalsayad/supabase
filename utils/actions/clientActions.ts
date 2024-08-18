@@ -2,7 +2,7 @@ import { Provider, Session, User } from '@supabase/supabase-js';
 import { createClient } from '../supabase/client';
 
 const redirectURL =
-  process.env.CURRENT_ENVIROMENT === 'dev' ? 'http://localhost:3000' : 'https://supabase-ebon.vercel.app/';
+  process.env.CURRENT_ENVIROMENT === 'dev' ? 'localhost:3000/verify' : 'supabase-ebon.vercel.app/verify';
 
 const supabase = createClient(); //*Imported from /supabase/client
 //!   Important Notice:
