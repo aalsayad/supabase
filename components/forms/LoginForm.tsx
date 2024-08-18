@@ -19,6 +19,14 @@ import GithubLogo from '@/public/images/GithubLogo.svg';
 import GoogleLogo from '@/public/images/GoogleLogo.svg';
 import Image from 'next/image';
 import { SelectUser } from '@/db/schema';
+import { createClient } from '@/utils/supabase/client';
+
+const redirectURL =
+  process.env.NEXT_PUBLIC_CURRENT_ENVIROMENT === 'dev'
+    ? 'http://localhost:3000/verify'
+    : 'https://supabase-ebon.vercel.app/verify';
+
+const supabase = createClient();
 
 interface FormState {
   status: 'idle' | 'submitting' | 'pending' | 'success' | 'error';
@@ -95,7 +103,14 @@ const LoginForm = ({ setFormComponent }: { setFormComponent: SetFormComponentTyp
     setFormState({ status: 'submitting', message: '' });
     console.log('Logging in with Github');
     try {
-      await signInWithOAuth('github');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: redirectURL,
+        },
+      });
+
+      if (error) throw error;
       setFormState({ status: 'submitting', message: 'Logging in through github' });
     } catch (e) {
       console.log('Error during github login:', e);
