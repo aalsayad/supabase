@@ -115,3 +115,62 @@ export async function deleteAccountById(userId: string) {
   const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
   if (deleteAuthError) throw deleteAuthError;
 }
+
+//!Amazon S3
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { putObjectCommand, s3 } from '../aws/s3/client';
+
+//@Returns a signed URL to allow user to upload a file to s3, we will use this link to send a PUT request and upload file to S3
+export async function getSignedURL(
+  family: 'image' | 'video' | 'document' | 'zip',
+  type: string,
+  size: number,
+  checksum: string,
+  session: Session | null
+) {
+  const acceptedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const acceptedVideoTypes = ['video/mp4', 'video/webm'];
+  const acceptedDocumentTypes = [
+    'application/pdf', // PDF
+    'application/msword', // Word (.doc)
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word (.docx)
+    'application/vnd.ms-excel', // Excel (.xls)
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel (.xlsx)
+    'application/vnd.ms-powerpoint', // PowerPoint (.ppt)
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PowerPoint (.pptx)
+  ];
+  const acceptedZipTypes = [
+    'application/zip', // ZIP files
+    'application/x-zip-compressed', // ZIP files (alternative MIME type)
+  ];
+
+  let maxFileSize: number;
+
+  //File type checks
+  if (family === 'image') {
+    if (!acceptedImageTypes.includes(type)) throw Error('Invalid File Type for family: Image');
+    maxFileSize = 1024 * 1024 * 3; // 3 MB
+  } else if (family === 'video') {
+    if (!acceptedVideoTypes.includes(type)) throw Error('Invalid File Type for family: Video');
+    maxFileSize = 1024 * 1024 * 100; // 30 MB
+  } else if (family === 'document') {
+    if (!acceptedDocumentTypes.includes(type)) throw Error('Invalid File Type for family: Document');
+    maxFileSize = 1024 * 1024 * 100; // 30 MB
+  } else if (family === 'zip') {
+    if (!acceptedZipTypes.includes(type)) throw Error('Invalid File Type for family: Zip');
+    maxFileSize = 1024 * 1024 * 300; // 300 MB
+  } else {
+    throw Error('Invalid Family Type');
+  }
+
+  //File Size checks
+  if (size > maxFileSize) throw Error(`File too large. Max Size: ${maxFileSize}MB`);
+
+  if (!session) throw Error(`Not Authenticated`);
+
+  const signedURL = await getSignedUrl(s3, putObjectCommand(type, size, checksum, session.user.id), {
+    expiresIn: 60,
+  });
+
+  return signedURL;
+}

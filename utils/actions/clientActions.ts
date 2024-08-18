@@ -129,3 +129,15 @@ export async function resetAccountPassword(password: string) {
 
   if (error) throw error;
 }
+
+//@-- Allow user to update his record with new profile picture
+export async function updateUserProfilePicture(url: string, userId: string | undefined) {
+  const currentUser = await getClientAuthUser();
+  if (!currentUser) throw Error('No user currently logged in');
+
+  if (userId !== currentUser.id) throw Error('User Id mismatch');
+
+  const { error } = await supabase.from('users').update({ picture: url }).eq('authData->>id', userId);
+
+  if (error) throw Error('User Id mismatch');
+}
